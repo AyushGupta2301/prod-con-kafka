@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> Client </title>
+</head>
+
+<body>
+    <input type="text" id="topic" placeholder="Enter Topic">
+    <input type="text" id="partition" placeholder="Enter Partition">
+    <button id="subscribe">Add Subscription</button>
+    <div style="display:flex; flex-direction:row; justify-content: space-between; flex-wrap: wrap;" id="mainbody">
+
+    </div>
+    <script>
+        window.onload = function () {
+            const conn = new WebSocket('ws://localhost:3001/', 'echo-protocol');
+            // var subscriptions = [];
+            var numsubs = 0;
+            conn.onerror = function (err) {
+                console.log(err);
+                document.getElementById('status').innerHTML = "ERROR IN WEBSOCKET CONNECTION";
+                clearInterval(keepAlive);
+                window.alert("WebSocket Connection Failed");
+            }
+            conn.onmessage = function (message) {
+                const messg = JSON.parse(message.data);
+                const subid = Number(messg.subid);
+                if(messg.type === "message"){
+                    const newlistMsg = document.createElement('li');
+                    newlistMsg.innerHTML = messg.message;
+                    document.getElementById('messages'+ String(subid)).appendChild(newlistMsg);
+                }
+                if(messg.type === "error"){
+                    console.log(messg);
+                    window.alert("ERROR");
+                }
+            }
+
+            document.getElementById('subscribe').addEventListener('click', () => {
+                var sinceLast = 0;
+                var timerInit = false;
+                var keepAlive;
+                const subid = numsubs++;
+                const topic = document.getElementById('topic').value;
+                const partition = document.getElementById('partition').value;
+                const newSub = "<div><br><br><p id='status'" + String(subid) + "><br>subid: "+ String(subid) +"<br>topic: "+ topic +"<br>partiton: "+ partition +"<br>Messages: </p><p><ul id='messages" + String(subid) + "'></ul></p></div>"
+                document.getElementById('mainbody').innerHTML += newSub;
+                conn.send(JSON.stringify({ type: "subscribe", topic: topic, partition: partition, subid: subid }));
+                // if (!timerInit) {
+                //     keepAlive = setInterval(() => {
+                //         if (sinceLast >= 60) {
+                //             conn.send(JSON.stringify({ type: "close", subid: subid }));
+                //         }
+                //         else {
+                //             sinceLast++;
+                //         }
+                //     }, 1000)
+                // }
+            });
+        }
+    </script>
+</body>
+
+</html>
